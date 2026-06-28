@@ -2,14 +2,14 @@ import streamlit as st
 import torch
 import torch.nn as nn
 import torchvision.transforms as transforms
+from PIL import Image, ImageOps
 import numpy as np
-import cv2
+from scipy.ndimage import binary_dilation
+import matplotlib.pyplot as plt
 
-from PIL import Image
-
-# -----------------------------
-# Page
-# -----------------------------
+# ----------------------------------
+# Page Config
+# ----------------------------------
 st.set_page_config(
     page_title="MNIST Handwritten Digit Predictor",
     page_icon="✍️",
@@ -17,16 +17,16 @@ st.set_page_config(
 )
 
 st.title("✍️ MNIST Handwritten Digit Predictor")
-st.write("Upload one or more handwritten digit images.")
+st.write("Upload one or more handwritten digit images (0–9).")
 
-# -----------------------------
+# ----------------------------------
 # Device
-# -----------------------------
+# ----------------------------------
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-# -----------------------------
+# ----------------------------------
 # CNN Model
-# -----------------------------
+# ----------------------------------
 class CNN(nn.Module):
 
     def __init__(self):
@@ -59,9 +59,9 @@ class CNN(nn.Module):
         return x
 
 
-# -----------------------------
+# ----------------------------------
 # Load Model
-# -----------------------------
+# ----------------------------------
 @st.cache_resource
 def load_model():
 
@@ -81,151 +81,135 @@ def load_model():
 
 model = load_model()
 
-# -----------------------------
+# ----------------------------------
 # Image Preprocessing
-# -----------------------------
-def preprocess_image(uploaded_file):
+# ----------------------------------
+def preprocess_image(uploaded_file, iterations=4):
 
-    # Read image
     img = Image.open(uploaded_file).convert("L")
-    img = np.array(img)
 
-    # Blur
-    img = cv2.GaussianBlur(img, (5,5), 0)
+    img = ImageOps.invert(img)
 
-    # Otsu Threshold
-    _, thresh = cv2.threshold(
-        img,
-        0,
-        255,
-        cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU
-    )
+    img_array = np.array(img)
 
-    # Dilate
-    kernel = np.ones((3,3), np.uint8)
-    thresh = cv2.dilate(thresh, kernel, iterations=2)
+    img_array[img_array < 100] = 0
+    img_array[img_array >= 100] = 255
 
-    # Largest Connected Component
-    num_labels, labels, stats, _ = cv2.connectedComponentsWithStats(
-        thresh,
-        connectivity=8
-    )
+    binary = img_array > 0
 
-    if num_labels > 1:
-        largest = 1 + np.argmax(stats[1:, cv2.CC_STAT_AREA])
-        digit = np.zeros_like(thresh)
-        digit[labels == largest] = 255
-    else:
-        digit = thresh
+    dilated = binary_dilation(binary, iterations=iterations)
 
-    # Bounding Box
-    coords = cv2.findNonZero(digit)
+    img_array = (dilated * 255).astype(np.uint8)
 
-    if coords is None:
-        return None, None
+    coords = np.where(img_array > 0)
 
-    x, y, w, h = cv2.boundingRect(coords)
+    top = coords[0].min()
+    bottom = coords[0].max()
 
-    digit = digit[y:y+h, x:x+w]
+    left = coords[1].min()
+    right = coords[1].max()
 
-    # Make Square
+    img_array = img_array[top:bottom+1, left:right+1]
+
+    h, w = img_array.shape
+
     size = max(h, w)
 
     square = np.zeros((size, size), dtype=np.uint8)
 
-    yoff = (size-h)//2
-    xoff = (size-w)//2
+    y_offset = (size-h)//2
+    x_offset = (size-w)//2
 
-    square[yoff:yoff+h, xoff:xoff+w] = digit
+    square[
+        y_offset:y_offset+h,
+        x_offset:x_offset+w
+    ] = img_array
 
-    # Resize to 20x20
-    digit20 = cv2.resize(square, (20,20))
+    img20 = Image.fromarray(square).resize((20,20))
 
-    # 28x28 Canvas
     canvas = np.zeros((28,28), dtype=np.uint8)
-    canvas[4:24,4:24] = digit20
+
+    canvas[4:24,4:24] = np.array(img20)
 
     processed = Image.fromarray(canvas)
 
     transform = transforms.Compose([
         transforms.ToTensor(),
-        transforms.Normalize(
-            (0.1307,),
-            (0.3081,)
-        )
+        transforms.Normalize((0.1307,), (0.3081,))
     ])
 
     tensor = transform(processed).unsqueeze(0)
 
     return processed, tensor
-# -----------------------------
+
+# ----------------------------------
 # Upload Images
-# -----------------------------
+# ----------------------------------
 uploaded_files = st.file_uploader(
-    "Upload handwritten digit images",
+    "Upload Handwritten Digit Images",
     type=["png", "jpg", "jpeg"],
     accept_multiple_files=True
 )
 
-# -----------------------------
+# ----------------------------------
 # Prediction
-# -----------------------------
+# ----------------------------------
 if uploaded_files:
 
     for uploaded_file in uploaded_files:
 
         st.markdown("---")
-        st.subheader(f"📄 {uploaded_file.name}")
+        st.subheader(f"{uploaded_file.name}")
 
         # Original Image
         original = Image.open(uploaded_file).convert("L")
 
         # Preprocess
-        processed, tensor = preprocess_image(uploaded_file)
+        processed_img, tensor = preprocess_image(uploaded_file, iterations=4)
 
-        if processed is None:
-            st.error("No digit detected in the image.")
-            continue
-
-        # Preview
         col1, col2 = st.columns(2)
 
         with col1:
-            st.image(original, caption="Original Image", use_container_width=True)
+            st.image(original, caption="Original Image", width=250)
 
         with col2:
-            st.image(processed, caption="Processed Image", use_container_width=True)
+            st.image(processed_img, caption="Processed Image", width=250)
 
-        # Prediction
         tensor = tensor.to(device)
 
         with torch.no_grad():
+
             output = model(tensor)
+
             probs = torch.softmax(output, dim=1)[0]
 
-            pred = output.argmax(dim=1).item()
+            pred = torch.argmax(output, dim=1).item()
+
             confidence = probs[pred].item() * 100
 
-        st.success(f"🎯 Prediction : **{pred}**")
-        st.info(f"Confidence : **{confidence:.2f}%**")
+        st.success(
+            f" Prediction : {pred}"
+        )
 
-        # Probability Chart
+        st.info(
+            f"Confidence : {confidence:.2f}%"
+        )
+
         st.subheader("Prediction Probabilities")
 
-        prob_dict = {
-            str(i): float(probs[i].cpu()) * 100
-            for i in range(10)
-        }
+        prob_dict = {}
+
+        for i in range(10):
+            prob_dict[str(i)] = float(probs[i].cpu()) * 100
 
         st.bar_chart(prob_dict)
 
-        # Detailed Probabilities
         with st.expander("Show All Probabilities"):
 
             for i in range(10):
 
                 st.write(
-                    f"Digit {i}: {probs[i].item()*100:.2f}%"
+                    f"Digit {i} : {probs[i].item()*100:.2f}%"
                 )
 
 st.markdown("---")
