@@ -6,6 +6,7 @@ from PIL import Image, ImageOps
 import numpy as np
 from scipy.ndimage import binary_dilation
 import matplotlib.pyplot as plt
+from streamlit_cropper import st_cropper
 
 # ----------------------------------
 # Page Config
@@ -84,9 +85,12 @@ model = load_model()
 # ----------------------------------
 # Image Preprocessing
 # ----------------------------------
-def preprocess_image(uploaded_file, iterations=4):
+def preprocess_image(image, iterations=4):
 
-    img = Image.open(uploaded_file).convert("L")
+    if isinstance(image, Image.Image):
+        img = image.convert("L")
+    else:
+        img = Image.open(image).convert("L")
 
     img = ImageOps.invert(img)
 
@@ -146,26 +150,32 @@ def preprocess_image(uploaded_file, iterations=4):
 # Upload Images
 # ----------------------------------
 uploaded_files = st.file_uploader(
-    "Upload Handwritten Digit Images",
+    "Upload handwritten digit images",
     type=["png", "jpg", "jpeg"],
     accept_multiple_files=True
 )
 
-# ----------------------------------
-# Prediction
-# ----------------------------------
 if uploaded_files:
 
     for uploaded_file in uploaded_files:
 
-        st.markdown("---")
-        st.subheader(f"{uploaded_file.name}")
+        st.subheader(uploaded_file.name)
 
-        # Original Image
-        original = Image.open(uploaded_file).convert("L")
+        img = Image.open(uploaded_file)
 
+        st.write("Crop the digit before prediction")
+
+        cropped = st_cropper(
+            img,
+            realtime_update=True,
+            box_color="#00FF00",
+            aspect_ratio=(1,1)
+        )
+
+        st.image(cropped, caption="Cropped Image", width=250)
+        
         # Preprocess
-        processed_img, tensor = preprocess_image(uploaded_file, iterations=4)
+        processed, tensor = preprocess_image(cropped)
 
         col1, col2 = st.columns(2)
 
