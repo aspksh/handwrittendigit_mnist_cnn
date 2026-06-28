@@ -5,4 +5,4 @@ numpy
 pillow
 matplotlib
 scipy
-opencv-python-headless
+streamlit-cropper
