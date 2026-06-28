@@ -170,7 +170,9 @@ if uploaded_files:
             aspect_ratio=(1,1)
         )
         
-        col1, col2 = st.columns(2)
+        processed, tensor = preprocess_image(cropped)
+
+        col1, col2, col3 = st.columns(3)
         
         with col1:
             st.image(img, caption="Original Image", use_container_width=True)
