@@ -165,7 +165,7 @@ if uploaded_files:
 
         cropped = st_cropper(
             img,
-            realtime_update=True,
+            realtime_update= False,
             box_color="#00FF00",
             aspect_ratio=(1,1)
         )
@@ -178,55 +178,44 @@ if uploaded_files:
         with col2:
             st.image(cropped, caption="Cropped Image", use_container_width=True)
         
-        processed, tensor = preprocess_image(cropped)
+        with col3:
+            st.image(processed, caption="Processed", use_container_width=True)
+            
+
+        # --------------------------
+        # Predict Button
+        # --------------------------
+        if st.button(f"Predict {uploaded_file.name}"):
         
-        # Preprocess
-        processed, tensor = preprocess_image(cropped)
-
-        col1, col2 = st.columns(2)
-
-        with col1:
-            st.image(original, caption="Original Image", width=250)
-
-        with col2:
-            st.image(processed_img, caption="Processed Image", width=250)
-
-        tensor = tensor.to(device)
-
-        with torch.no_grad():
-
-            output = model(tensor)
-
-            probs = torch.softmax(output, dim=1)[0]
-
-            pred = torch.argmax(output, dim=1).item()
-
-            confidence = probs[pred].item() * 100
-
-        st.success(
-            f" Prediction : {pred}"
-        )
-
-        st.info(
-            f"Confidence : {confidence:.2f}%"
-        )
-
-        st.subheader("Prediction Probabilities")
-
-        prob_dict = {}
-
-        for i in range(10):
-            prob_dict[str(i)] = float(probs[i].cpu()) * 100
-
-        st.bar_chart(prob_dict)
-
-        with st.expander("Show All Probabilities"):
-
+            tensor = tensor.to(device)
+        
+            with torch.no_grad():
+        
+                output = model(tensor)
+        
+                probs = torch.softmax(output, dim=1)[0]
+        
+                pred = torch.argmax(output, dim=1).item()
+        
+                confidence = probs[pred].item() * 100
+        
+            st.success(f"🎯 Prediction : {pred}")
+        
+            st.info(f"Confidence : {confidence:.2f}%")
+        
+            st.subheader("Prediction Probabilities")
+        
+            prob_dict = {}
+        
             for i in range(10):
-
-                st.write(
-                    f"Digit {i} : {probs[i].item()*100:.2f}%"
-                )
+                prob_dict[str(i)] = float(probs[i].cpu()) * 100
+        
+            st.bar_chart(prob_dict)
+        
+            with st.expander("Show All Probabilities"):
+        
+                for i in range(10):
+                    st.write(f"Digit {i}: {probs[i].item()*100:.2f}%")
 
 st.markdown("---")
 st.caption("Developed using PyTorch + Streamlit")
