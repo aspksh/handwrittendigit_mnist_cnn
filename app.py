@@ -163,16 +163,22 @@ if uploaded_files:
 
         img = Image.open(uploaded_file)
 
-        st.write("Crop the digit before prediction")
-
         cropped = st_cropper(
             img,
             realtime_update=True,
             box_color="#00FF00",
             aspect_ratio=(1,1)
         )
-
-        st.image(cropped, caption="Cropped Image", width=250)
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.image(img, caption="Original Image", use_container_width=True)
+        
+        with col2:
+            st.image(cropped, caption="Cropped Image", use_container_width=True)
+        
+        processed, tensor = preprocess_image(cropped)
         
         # Preprocess
         processed, tensor = preprocess_image(cropped)
