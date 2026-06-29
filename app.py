@@ -85,41 +85,57 @@ model = load_model()
 # ----------------------------------
 # Image Preprocessing
 # ----------------------------------
-def preprocess_image(image):
+def preprocess_image(image, iterations=4):
 
-    # PIL Image
     if isinstance(image, Image.Image):
         img = image.convert("L")
     else:
         img = Image.open(image).convert("L")
 
-    # Invert (white digit on black background)
     img = ImageOps.invert(img)
 
     img_array = np.array(img)
 
-    # Fixed Threshold
-    img_array = np.where(img_array > 100, 255, 0).astype(np.uint8)
+    img_array[img_array < 100] = 0
+    img_array[img_array >= 100] = 255
 
-    # ---------- NO AUTO CROP ----------
-    # User ne jo crop kiya hai usi ko use karna hai
+    binary = img_array > 0
 
-    # Square Canvas
+    dilated = binary_dilation(binary, iterations=iterations)
+
+    img_array = (dilated * 255).astype(np.uint8)
+    
+    coords = np.where(img_array > 0)
+
+    top = coords[0].min()
+    bottom = coords[0].max()
+    
+    left = coords[1].min()
+    right = coords[1].max()
+
+    img_array = img_array[top:bottom+1, left:right+1]
+    
     h, w = img_array.shape
+
     size = max(h, w)
 
     square = np.zeros((size, size), dtype=np.uint8)
 
-    y = (size - h) // 2
-    x = (size - w) // 2
+    y_offset = (size-h)//2
+    x_offset = (size-w)//2
 
-    square[y:y+h, x:x+w] = img_array
+    square[
+        y_offset:y_offset+h,
+        x_offset:x_offset+w
+    ] = img_array
 
-    # Resize directly to 28x28
-    processed = Image.fromarray(square).resize(
-        (28, 28),
-        Image.Resampling.LANCZOS
-    )
+    img20 = Image.fromarray(square).resize((20,20))
+
+    canvas = np.zeros((28,28), dtype=np.uint8)
+
+    canvas[4:24,4:24] = np.array(img20)
+
+    processed = Image.fromarray(canvas)
 
     transform = transforms.Compose([
         transforms.ToTensor(),
@@ -129,6 +145,7 @@ def preprocess_image(image):
     tensor = transform(processed).unsqueeze(0)
 
     return processed, tensor
+
 
 # ----------------------------------
 # Upload Images
