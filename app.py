@@ -174,15 +174,9 @@ if uploaded_files:
         
         processed, tensor = preprocess_image(cropped)
 
-        col1, col2, col3 = st.columns(3)
-        
+        col1 = st.columns(3)           
+          
         with col1:
-            st.image(img, caption="Original Image", use_container_width=True)
-        
-        with col2:
-            st.image(cropped, caption="Cropped Image", use_container_width=True)
-        
-        with col3:
             st.image(processed, caption="Processed", use_container_width=True)
             
 
