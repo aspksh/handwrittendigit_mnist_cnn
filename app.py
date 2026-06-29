@@ -104,17 +104,7 @@ def preprocess_image(image, iterations=4):
     dilated = binary_dilation(binary, iterations=iterations)
 
     img_array = (dilated * 255).astype(np.uint8)
-
-    coords = np.where(img_array > 0)
-
-    top = coords[0].min()
-    bottom = coords[0].max()
-
-    left = coords[1].min()
-    right = coords[1].max()
-
-    img_array = img_array[top:bottom+1, left:right+1]
-
+    
     h, w = img_array.shape
 
     size = max(h, w)
