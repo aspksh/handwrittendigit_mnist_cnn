@@ -163,7 +163,7 @@ if uploaded_files:
         st.subheader(uploaded_file.name)
 
         img = Image.open(uploaded_file)
-        img.thumbnail((800, 800))
+        img.thumbnail((400, 400))
 
         cropped = st_cropper(
             img,
