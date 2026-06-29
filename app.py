@@ -85,47 +85,41 @@ model = load_model()
 # ----------------------------------
 # Image Preprocessing
 # ----------------------------------
-def preprocess_image(image, iterations=4):
+def preprocess_image(image):
 
+    # PIL Image
     if isinstance(image, Image.Image):
         img = image.convert("L")
     else:
         img = Image.open(image).convert("L")
 
+    # Invert (white digit on black background)
     img = ImageOps.invert(img)
 
     img_array = np.array(img)
 
-    img_array[img_array < 100] = 0
-    img_array[img_array >= 100] = 255
+    # Fixed Threshold
+    img_array = np.where(img_array > 100, 255, 0).astype(np.uint8)
 
-    binary = img_array > 0
+    # ---------- NO AUTO CROP ----------
+    # User ne jo crop kiya hai usi ko use karna hai
 
-    dilated = binary_dilation(binary, iterations=iterations)
-
-    img_array = (dilated * 255).astype(np.uint8)
-    
+    # Square Canvas
     h, w = img_array.shape
-
     size = max(h, w)
 
     square = np.zeros((size, size), dtype=np.uint8)
 
-    y_offset = (size-h)//2
-    x_offset = (size-w)//2
+    y = (size - h) // 2
+    x = (size - w) // 2
 
-    square[
-        y_offset:y_offset+h,
-        x_offset:x_offset+w
-    ] = img_array
+    square[y:y+h, x:x+w] = img_array
 
-    img20 = Image.fromarray(square).resize((20,20))
-
-    canvas = np.zeros((28,28), dtype=np.uint8)
-
-    canvas[4:24,4:24] = np.array(img20)
-
-    processed = Image.fromarray(canvas)
+    # Resize directly to 28x28
+    processed = Image.fromarray(square).resize(
+        (28, 28),
+        Image.Resampling.LANCZOS
+    )
 
     transform = transforms.Compose([
         transforms.ToTensor(),
