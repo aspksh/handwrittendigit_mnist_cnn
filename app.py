@@ -174,7 +174,7 @@ if uploaded_files:
         
         processed, tensor = preprocess_image(cropped)                
         
-        st.image(processed, caption="Processed", width=100)
+        st.image(processed, caption="Processed", width=200)
             
 
         # --------------------------
