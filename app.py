@@ -149,7 +149,7 @@ if uploaded_files:
 
         cropped = st_cropper(
             img,
-            realtime_update= False,
+            realtime_update= True,
             box_color="#00FF00",
             aspect_ratio=(1,1)
         )
