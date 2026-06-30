@@ -19,7 +19,7 @@ st.set_page_config(
 
 st.title("✍️ Handwritten Digit Predictor")
 st.write("Upload one or more handwritten digit images (0–9).")
-st.write("Take a white sheet of paper and write any digit from 0 to 9 and then upload the clean image of it from your camera.")
+st.write("Take a white sheet of paper and write any digit from 0 to 9 and then upload the large and clean image of it from your camera.")
 st.write("Crop the digit properly close to it.")
 st.write("Now click on the 'Predict' button.")
 # ----------------------------------
