@@ -12,14 +12,16 @@ from streamlit_cropper import st_cropper
 # Page Config
 # ----------------------------------
 st.set_page_config(
-    page_title="MNIST Handwritten Digit Predictor",
+    page_title="Handwritten Digit Predictor",
     page_icon="✍️",
     layout="wide"
 )
 
-st.title("✍️ MNIST Handwritten Digit Predictor")
+st.title("✍️ Handwritten Digit Predictor")
 st.write("Upload one or more handwritten digit images (0–9).")
-
+st.write("Take a white sheet of paper and write any digit from 0 to 9 and then upload the clean image of it from your camera.")
+st.write("Crop the digit properly close to it.")
+st.write("Now click on the 'Predict' button.")
 # ----------------------------------
 # Device
 # ----------------------------------
